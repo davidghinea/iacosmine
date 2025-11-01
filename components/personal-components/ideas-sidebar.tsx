@@ -72,7 +72,7 @@ export function IdeasSidebar() {
       const updatedIdeas = prevIdeas.map((idea) =>
         idea.id === id ? { ...idea, starred: !idea.starred } : idea
       );
-      
+
       // Sort: starred items first
       return updatedIdeas.sort((a, b) => {
         if (a.starred && !b.starred) return -1;
@@ -145,18 +145,18 @@ export function IdeasSidebar() {
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <ChevronDown className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-8 w-8"
                       onClick={() => toggleStar(idea.id)}
                     >
-                      <Star 
-                        className={`h-4 w-4 ${idea.starred ? 'fill-current' : ''}`}
+                      <Star
+                        className={`h-4 w-4 ${
+                          idea.starred ? "fill-current" : ""
+                        }`}
                       />
                     </Button>
-
-                    
                   </div>
                 </div>
               </div>

@@ -21,7 +21,6 @@ import {
 import {
   ArrowUp,
   ArrowDown,
-  Star,
   X,
   Check,
   ChevronRight,
@@ -51,7 +50,6 @@ interface Idea {
   };
   title: string;
   description: string;
-  starred?: boolean;
   upvotes?: number;
   downvotes?: number;
   published?: boolean;
@@ -67,7 +65,6 @@ const defaultUser = {
 
 function IdeaTile({
   idea,
-  onToggleStar,
   onToggleExpand,
   onUpvote,
   onDownvote,
@@ -75,11 +72,10 @@ function IdeaTile({
   isPublished,
 }: {
   idea: Idea;
-  onToggleStar: (id: string) => void; // Changed from number to string
-  onToggleExpand: (id: string) => void; // Changed from number to string
-  onUpvote: (id: string) => void; // Changed from number to string
-  onDownvote: (id: string) => void; // Changed from number to string
-  onDelete: (id: string) => void; // Changed from number to string
+  onToggleExpand: (id: string) => void;
+  onUpvote: (id: string) => void;
+  onDownvote: (id: string) => void;
+  onDelete: (id: string) => void;
   isPublished: boolean;
 }) {
   const [isExpanded, setIsExpanded] = React.useState(false);
@@ -175,31 +171,6 @@ function IdeaTile({
               </Button>
             </>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={ACTION_BTN}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleStar(idea.id);
-            }}
-          >
-            <Star className={cn(ICON_MD, idea.starred ? "fill-current" : "")} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              ACTION_BTN,
-              "text-green-500 hover:text-green-600 hover:bg-green-500/10"
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(idea.id);
-            }}
-          >
-            <Check className={ICON_MD} />
-          </Button>
         </div>
       </div>
       {isExpanded && (
@@ -282,6 +253,7 @@ export function IdeasSidebarShadcn({
   const [isCheckingMembership, setIsCheckingMembership] = React.useState(true);
   const [orgId, setOrgId] = React.useState<string | null>(null);
   const [instanceId] = React.useState(() => ++sidebarInstanceCount);
+  const [isOwner, setIsOwner] = React.useState(false);
 
   // Cleanup on unmount
   React.useEffect(() => {
@@ -338,9 +310,11 @@ export function IdeasSidebarShadcn({
         if (membership) {
           console.log("User IS a member of org:", orgId);
           setIsMember(true);
+          setIsOwner(membership.role === "Owner");
         } else {
           console.log("User is NOT a member of org:", orgId);
           setIsMember(false);
+          setIsOwner(false);
         }
       } else {
         console.log("No authenticated user");
@@ -393,21 +367,35 @@ export function IdeasSidebarShadcn({
         ...new Set((data || []).map((p) => p.author_id).filter(Boolean)),
       ];
 
-      let profilesMap: Record<string, { full_name: string }> = {};
+      let profilesMap: Record<
+        string,
+        { full_name: string; avatar_url?: string }
+      > = {};
+
       if (authorIds.length > 0) {
         // Fetch all profiles for these author IDs in one go
         const { data: profilesData, error: profilesError } = await supabase
           .from("profiles")
-          .select("id, full_name")
+          .select("id, full_name, avatar_url")
           .in("id", authorIds);
 
         if (profilesError) {
-          console.error("Error fetching profiles:", profilesError);
-        } else {
+          console.warn(
+            "Could not fetch profiles, using fallback names:",
+            profilesError
+          );
+          // Continue without profiles - use fallback names
+        } else if (profilesData) {
           // Create a map of authorId -> profile for easy lookup
           profilesMap = profilesData.reduce(
-            (acc: Record<string, { full_name: string }>, profile) => {
-              acc[profile.id] = profile;
+            (
+              acc: Record<string, { full_name: string; avatar_url?: string }>,
+              profile
+            ) => {
+              acc[profile.id] = {
+                full_name: profile.full_name,
+                avatar_url: profile.avatar_url,
+              };
               return acc;
             },
             {}
@@ -416,18 +404,19 @@ export function IdeasSidebarShadcn({
       }
 
       const ideasWithAuthors = (data || []).map((post: any) => {
-        const authorName =
-          profilesMap[post.author_id]?.full_name || "Anonymous";
+        // Try to get the profile from the map, fallback to "Anonymous"
+        const profile = profilesMap[post.author_id];
+        const authorName = profile?.full_name || "Anonymous";
+        const avatarUrl = profile?.avatar_url || "/placeholder.svg";
 
         return {
           id: post.id,
           user: {
             name: authorName,
-            avatar: "/placeholder.svg",
+            avatar: avatarUrl,
           },
           title: post.title,
           description: post.description || "",
-          starred: false,
           upvotes: post.upvotes || 0,
           downvotes: post.downvotes || 0,
           published: true,
@@ -438,6 +427,7 @@ export function IdeasSidebarShadcn({
       });
 
       console.log("Transformed ideas:", ideasWithAuthors.length);
+      // Sort starred items first before setting state
       setIdeas(ideasWithAuthors);
       setIsLoadingIdeas(false);
     };
@@ -470,19 +460,6 @@ export function IdeasSidebarShadcn({
 
   const updateIdea = (id: string, updater: (i: Idea) => Idea) =>
     setIdeas((prev) => prev.map((i) => (i.id === id ? updater(i) : i)));
-
-  const sortStarredFirst = (list: Idea[]) =>
-    list
-      .slice()
-      .sort((a, b) => (a.starred === b.starred ? 0 : a.starred ? -1 : 1));
-
-  const toggleStar = (id: string) => {
-    setIdeas((prev) =>
-      sortStarredFirst(
-        prev.map((i) => (i.id === id ? { ...i, starred: !i.starred } : i))
-      )
-    );
-  };
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -670,7 +647,6 @@ export function IdeasSidebarShadcn({
                     <IdeaTile
                       key={idea.id}
                       idea={idea}
-                      onToggleStar={toggleStar}
                       onToggleExpand={toggleExpand}
                       onUpvote={handleUpvote}
                       onDownvote={handleDownvote}
@@ -770,10 +746,10 @@ export function IdeasSidebarShadcn({
             )}
           >
             <DialogPrimitive.Title className="text-base sm:text-lg font-semibold">
-              Finish your idea
+              Delete idea
             </DialogPrimitive.Title>
             <DialogPrimitive.Description className="text-xs sm:text-sm text-muted-foreground">
-              Are you sure you want to finish your idea? This action cannot be
+              Are you sure you want to delete this idea? This action cannot be
               undone.
             </DialogPrimitive.Description>
             <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-2 mt-4">
@@ -787,10 +763,10 @@ export function IdeasSidebarShadcn({
                 </Button>
               </DialogPrimitive.Close>
               <Button
-                className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
+                className="bg-red-600 hover:bg-red-700 text-white w-full sm:w-auto"
                 onClick={handleDeleteConfirm}
               >
-                Finish
+                Delete
               </Button>
             </div>
           </DialogPrimitive.Content>
