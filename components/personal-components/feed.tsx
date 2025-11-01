@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import PostCard from "./post-card";
 import { supabase } from "@/lib/supabase";
 import { Building2, UserPlus, X, Copy, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Post {
   id: string;
@@ -129,6 +130,7 @@ interface Organization {
 }
 
 export default function Feed() {
+  const router = useRouter();
   const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
   const [joinedOrgs, setJoinedOrgs] = useState<Organization[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(true);
@@ -463,8 +465,7 @@ export default function Feed() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                console.log("View profile:", selectedOrg.id);
-                // Navigate to organization profile
+                router.push(`/organization/${selectedOrg.id}`);
               }}
               className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition"
             >
