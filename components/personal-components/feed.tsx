@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import PostCard from "./post-card"
+import { useState } from "react";
+import PostCard from "./post-card";
 
 interface Post {
-  id: string
-  businessName: string
-  businessLogo: string
-  title: string
-  description: string
-  ideaBy: string
-  ideaByRole: string
-  ideaByPhoto: string
-  congratulations: number
-  hasUserCongratulated: boolean
-  commentCount: number
+  id: string;
+  businessName: string;
+  businessLogo: string;
+  title: string;
+  description: string;
+  ideaBy: string;
+  ideaByRole: string;
+  ideaByPhoto: string;
+  congratulations: number;
+  hasUserCongratulated: boolean;
+  commentCount: number;
 }
 
 const MOCK_POSTS: Post[] = [
@@ -43,7 +43,7 @@ const MOCK_POSTS: Post[] = [
     ideaByRole: "Sustainability Officer",
     ideaByPhoto: "/profiles/sarah.jpg",
     congratulations: 28,
-    hasUserCongratulated: true,
+    hasUserCongratulated: false,
     commentCount: 12,
   },
   {
@@ -116,10 +116,10 @@ const MOCK_POSTS: Post[] = [
     hasUserCongratulated: false,
     commentCount: 14,
   },
-]
+];
 
 export default function Feed() {
-  const [posts, setPosts] = useState<Post[]>(MOCK_POSTS)
+  const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
 
   const handleCongratulate = (postId: string) => {
     setPosts(
@@ -127,22 +127,28 @@ export default function Feed() {
         if (post.id === postId) {
           return {
             ...post,
-            congratulations: post.hasUserCongratulated ? post.congratulations - 1 : post.congratulations + 1,
+            congratulations: post.hasUserCongratulated
+              ? post.congratulations - 1
+              : post.congratulations + 1,
             hasUserCongratulated: !post.hasUserCongratulated,
-          }
+          };
         }
-        return post
-      }),
-    )
-  }
+        return post;
+      })
+    );
+  };
 
   return (
     <div className="w-full max-w-2xl mx-auto py-8 px-4">
       <div className="space-y-4">
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} onCongratulate={() => handleCongratulate(post.id)} />
+          <PostCard
+            key={post.id}
+            post={post}
+            onCongratulate={() => handleCongratulate(post.id)}
+          />
         ))}
       </div>
     </div>
-  )
+  );
 }

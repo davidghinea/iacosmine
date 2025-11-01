@@ -18,14 +18,25 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { ArrowUp, ArrowDown, Star, X, Check, ChevronRight, ChevronLeft, ChevronDown } from "lucide-react";
+import {
+  ArrowUp,
+  ArrowDown,
+  Star,
+  X,
+  Check,
+  ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // shared UI constants to keep sizes consistent and code short
 const AVATAR_SIZES = "size-10 sm:size-12 md:size-16";
-const ACTION_BTN = "size-6 sm:size-8 md:size-9 h-6 sm:h-8 md:h-9 w-6 sm:w-8 md:w-9 cursor-pointer";
+const ACTION_BTN =
+  "size-6 sm:size-8 md:size-9 h-6 sm:h-8 md:h-9 w-6 sm:w-8 md:w-9 cursor-pointer";
 const ICON_MD = "size-3 sm:size-4 md:size-5";
-const ITEM_ROW = "flex items-start gap-2 sm:gap-3 md:gap-3 p-3 sm:p-4 md:p-6 relative";
+const ITEM_ROW =
+  "flex items-start gap-2 sm:gap-3 md:gap-3 p-3 sm:p-4 md:p-6 relative";
 
 interface Idea {
   id: number;
@@ -39,7 +50,7 @@ interface Idea {
   upvotes?: number;
   downvotes?: number;
   published?: boolean;
-  myVote?: 'up' | 'down' | null;
+  myVote?: "up" | "down" | null;
 }
 
 const mockIdeas: Idea[] = [
@@ -92,15 +103,15 @@ const defaultUser = {
   avatar: "/placeholder.svg",
 };
 
-function IdeaTile({ 
-  idea, 
-  onToggleStar, 
+function IdeaTile({
+  idea,
+  onToggleStar,
   onToggleExpand,
   onUpvote,
   onDownvote,
   onDelete,
-  isPublished
-}: { 
+  isPublished,
+}: {
   idea: Idea;
   onToggleStar: (id: number) => void;
   onToggleExpand: (id: number) => void;
@@ -124,10 +135,14 @@ function IdeaTile({
             src={idea.user.avatar || "/placeholder.svg"}
             alt={idea.user.name}
           />
-          <AvatarFallback className="text-xs sm:text-sm md:text-xl">{idea.user.name.charAt(0)}</AvatarFallback>
+          <AvatarFallback className="text-xs sm:text-sm md:text-xl">
+            {idea.user.name.charAt(0)}
+          </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0 pr-1 sm:pr-2">
-          <div className="text-xs sm:text-sm md:text-base font-semibold leading-normal mb-1 sm:mb-1.5 md:mb-2 truncate">{idea.user.name}</div>
+          <div className="text-xs sm:text-sm md:text-base font-semibold leading-normal mb-1 sm:mb-1.5 md:mb-2 truncate">
+            {idea.user.name}
+          </div>
           <div className="flex items-center gap-1 min-w-0">
             <button
               onClick={handleExpand}
@@ -144,7 +159,12 @@ function IdeaTile({
                 handleExpand();
               }}
             >
-              <ChevronDown className={cn("size-4 transition-transform", isExpanded ? "rotate-180" : "rotate-0")} />
+              <ChevronDown
+                className={cn(
+                  "size-4 transition-transform",
+                  isExpanded ? "rotate-180" : "rotate-0"
+                )}
+              />
             </Button>
           </div>
         </div>
@@ -160,14 +180,19 @@ function IdeaTile({
                   onUpvote(idea.id);
                 }}
               >
-                <ArrowUp className={cn(ICON_MD, idea.myVote === 'up' ? 'text-green-600' : 'text-black')} />
+                <ArrowUp
+                  className={cn(
+                    ICON_MD,
+                    idea.myVote === "up" ? "text-green-600" : "text-black"
+                  )}
+                />
               </Button>
               <span className="text-[10px] sm:text-xs md:text-xs tabular-nums select-none min-w-6 text-center">
                 {(() => {
                   const diff = (idea.upvotes || 0) - (idea.downvotes || 0);
                   if (diff > 0) return `+${diff}`;
                   if (diff < 0) return `${diff}`;
-                  return '0';
+                  return "0";
                 })()}
               </span>
               <Button
@@ -179,7 +204,12 @@ function IdeaTile({
                   onDownvote(idea.id);
                 }}
               >
-                <ArrowDown className={cn(ICON_MD, idea.myVote === 'down' ? 'text-red-600' : 'text-black')} />
+                <ArrowDown
+                  className={cn(
+                    ICON_MD,
+                    idea.myVote === "down" ? "text-red-600" : "text-black"
+                  )}
+                />
               </Button>
             </>
           )}
@@ -197,7 +227,10 @@ function IdeaTile({
           <Button
             variant="ghost"
             size="icon"
-            className={cn(ACTION_BTN, "text-green-500 hover:text-green-600 hover:bg-green-500/10")}
+            className={cn(
+              ACTION_BTN,
+              "text-green-500 hover:text-green-600 hover:bg-green-500/10"
+            )}
             onClick={(e) => {
               e.stopPropagation();
               onDelete(idea.id);
@@ -222,24 +255,48 @@ function SidebarToggleButton() {
 
   return (
     <div
-      className="fixed top-1/2 -translate-y-1/2 z-50 transition-all duration-300"
+      className="fixed top-1/2 -translate-y-1/2 transition-all duration-300 flex items-center z-[9999] pointer-events-auto"
       style={{
+        // position the control so its right edge aligns with the sidebar's left edge when open,
+        // and anchor to the viewport edge when closed.
         right: open ? "var(--sidebar-width)" : "0px",
       }}
     >
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-7 sm:size-8 bg-background/80 hover:bg-background border border-border shadow-sm cursor-pointer"
-        onClick={toggleSidebar}
-      >
-        {open ? (
-          <ChevronRight className="size-4 sm:size-5" />
-        ) : (
-          <ChevronLeft className="size-4 sm:size-5" />
-        )}
-        <span className="sr-only">Toggle Sidebar</span>
-      </Button>
+      <div className="flex items-center bg-transparent rounded-sm">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 sm:size-8 bg-background/80 hover:bg-background border border-border shadow-sm cursor-pointer"
+          onClick={toggleSidebar}
+        >
+          {open ? (
+            <ChevronRight className="size-4 sm:size-5" />
+          ) : (
+            <ChevronLeft className="size-4 sm:size-5" />
+          )}
+          <span className="sr-only">Toggle Sidebar</span>
+        </Button>
+
+        {/* Vertical IDEAS label (always visible). px-2 gives equal left/right padding.
+            gap-3 increases spacing between letters so they remain readable. */}
+        <div className="ml-3 px-4 flex flex-col items-center select-none gap-3">
+          <span className="text-[10px] sm:text-xs font-medium leading-none tracking-wider">
+            I
+          </span>
+          <span className="text-[10px] sm:text-xs font-medium leading-none tracking-wider">
+            D
+          </span>
+          <span className="text-[10px] sm:text-xs font-medium leading-none tracking-wider">
+            E
+          </span>
+          <span className="text-[10px] sm:text-xs font-medium leading-none tracking-wider">
+            A
+          </span>
+          <span className="text-[10px] sm:text-xs font-medium leading-none tracking-wider">
+            S
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -261,10 +318,16 @@ export function IdeasSidebarShadcn({
     setIdeas((prev) => prev.map((i) => (i.id === id ? updater(i) : i)));
 
   const sortStarredFirst = (list: Idea[]) =>
-    list.slice().sort((a, b) => (a.starred === b.starred ? 0 : a.starred ? -1 : 1));
+    list
+      .slice()
+      .sort((a, b) => (a.starred === b.starred ? 0 : a.starred ? -1 : 1));
 
   const toggleStar = (id: number) => {
-    setIdeas((prev) => sortStarredFirst(prev.map((i) => (i.id === id ? { ...i, starred: !i.starred } : i))));
+    setIdeas((prev) =>
+      sortStarredFirst(
+        prev.map((i) => (i.id === id ? { ...i, starred: !i.starred } : i))
+      )
+    );
   };
 
   const toggleExpand = (id: number) => {
@@ -273,31 +336,41 @@ export function IdeasSidebarShadcn({
 
   const handleUpvote = (id: number) =>
     updateIdea(id, (i) => {
-      const up = i.upvotes || 0
-      const down = i.downvotes || 0
-      const vote = i.myVote ?? null
-      if (vote === 'up') {
-        return { ...i, upvotes: Math.max(0, up - 1), myVote: null }
+      const up = i.upvotes || 0;
+      const down = i.downvotes || 0;
+      const vote = i.myVote ?? null;
+      if (vote === "up") {
+        return { ...i, upvotes: Math.max(0, up - 1), myVote: null };
       }
-      if (vote === 'down') {
-        return { ...i, upvotes: up + 1, downvotes: Math.max(0, down - 1), myVote: 'up' }
+      if (vote === "down") {
+        return {
+          ...i,
+          upvotes: up + 1,
+          downvotes: Math.max(0, down - 1),
+          myVote: "up",
+        };
       }
-      return { ...i, upvotes: up + 1, myVote: 'up' }
-    })
+      return { ...i, upvotes: up + 1, myVote: "up" };
+    });
 
   const handleDownvote = (id: number) =>
     updateIdea(id, (i) => {
-      const up = i.upvotes || 0
-      const down = i.downvotes || 0
-      const vote = i.myVote ?? null
-      if (vote === 'down') {
-        return { ...i, downvotes: Math.max(0, down - 1), myVote: null }
+      const up = i.upvotes || 0;
+      const down = i.downvotes || 0;
+      const vote = i.myVote ?? null;
+      if (vote === "down") {
+        return { ...i, downvotes: Math.max(0, down - 1), myVote: null };
       }
-      if (vote === 'up') {
-        return { ...i, downvotes: down + 1, upvotes: Math.max(0, up - 1), myVote: 'down' }
+      if (vote === "up") {
+        return {
+          ...i,
+          downvotes: down + 1,
+          upvotes: Math.max(0, up - 1),
+          myVote: "down",
+        };
       }
-      return { ...i, downvotes: down + 1, myVote: 'down' }
-    })
+      return { ...i, downvotes: down + 1, myVote: "down" };
+    });
 
   const handleDeleteClick = (id: number) => {
     setIdeaToDelete(id);
@@ -306,7 +379,9 @@ export function IdeasSidebarShadcn({
 
   const handleDeleteConfirm = () => {
     if (ideaToDelete !== null) {
-      setIdeas((prevIdeas) => prevIdeas.filter((idea) => idea.id !== ideaToDelete));
+      setIdeas((prevIdeas) =>
+        prevIdeas.filter((idea) => idea.id !== ideaToDelete)
+      );
       setDeleteDialogOpen(false);
       setIdeaToDelete(null);
     }
@@ -320,7 +395,7 @@ export function IdeasSidebarShadcn({
   const handleAddIdea = () => {
     if (!newIdeaTitle.trim()) return;
 
-    const newId = Math.max(...ideas.map(i => i.id), 0) + 1;
+    const newId = Math.max(...ideas.map((i) => i.id), 0) + 1;
     const newIdea: Idea = {
       id: newId,
       user: defaultUser,
@@ -331,7 +406,7 @@ export function IdeasSidebarShadcn({
       downvotes: 0,
       published: true,
     };
-    
+
     setIdeas((prevIdeas) => [newIdea, ...prevIdeas]);
     setNewIdeaTitle("");
     setNewIdeaDescription("");
@@ -349,7 +424,11 @@ export function IdeasSidebarShadcn({
   return (
     <SidebarProvider
       defaultOpen={false}
-      style={{ "--sidebar-width": "clamp(364px, 52vw, 650px)" } as React.CSSProperties}
+      style={
+        {
+          "--sidebar-width": "clamp(364px, 52vw, 650px)",
+        } as React.CSSProperties
+      }
     >
       {children}
       <Sidebar
@@ -359,7 +438,9 @@ export function IdeasSidebarShadcn({
       >
         <SidebarHeader className="border-b border-foreground/40">
           <div className="flex items-center justify-between p-2 sm:p-3 md:p-4">
-            <h2 className="text-base sm:text-lg font-semibold">Trending Ideas</h2>
+            <h2 className="text-base sm:text-lg font-semibold">
+              Trending Ideas
+            </h2>
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -367,8 +448,8 @@ export function IdeasSidebarShadcn({
             <SidebarGroupContent>
               <div className="flex flex-col">
                 {ideas.map((idea) => (
-                  <IdeaTile 
-                    key={idea.id} 
+                  <IdeaTile
+                    key={idea.id}
                     idea={idea}
                     onToggleStar={toggleStar}
                     onToggleExpand={toggleExpand}
@@ -391,19 +472,24 @@ export function IdeasSidebarShadcn({
           </Button>
         </SidebarFooter>
       </Sidebar>
-      
+
       {isSheetOpen && (
         <div
           className="fixed inset-y-0 right-0 z-[60] sm:z-50 bg-sidebar border-l border-foreground/30 h-screen flex flex-col"
           style={{ width: "var(--sidebar-width)" }}
         >
           <div className="border-b border-foreground/30 p-4 sm:p-5 md:p-6">
-            <h2 className="text-base sm:text-lg font-semibold text-sidebar-foreground">Post Your Idea</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-sidebar-foreground">
+              Post Your Idea
+            </h2>
           </div>
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-10">
             <div className="flex flex-col gap-4 sm:gap-5 md:gap-6 h-full">
               <div className="flex flex-col gap-2 sm:gap-3">
-                <label htmlFor="idea-title" className="text-sm sm:text-base md:text-lg font-medium text-sidebar-foreground">
+                <label
+                  htmlFor="idea-title"
+                  className="text-sm sm:text-base md:text-lg font-medium text-sidebar-foreground"
+                >
                   Title *
                 </label>
                 <Input
@@ -415,7 +501,10 @@ export function IdeasSidebarShadcn({
                 />
               </div>
               <div className="flex flex-col gap-2 sm:gap-3 flex-1">
-                <label htmlFor="idea-description" className="text-sm sm:text-base md:text-lg font-medium text-sidebar-foreground">
+                <label
+                  htmlFor="idea-description"
+                  className="text-sm sm:text-base md:text-lg font-medium text-sidebar-foreground"
+                >
                   Description
                 </label>
                 <textarea
@@ -449,11 +538,12 @@ export function IdeasSidebarShadcn({
         </div>
       )}
 
-      <DialogPrimitive.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <DialogPrimitive.Root
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+      >
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay
-            className="fixed inset-0 z-50 bg-black/50 duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-          />
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
           <DialogPrimitive.Content
             className={cn(
               "fixed left-[50%] top-[50%] z-50 grid w-[90vw] sm:w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-3 sm:gap-4 border bg-background p-4 sm:p-6 shadow-lg duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 rounded-lg sm:rounded-lg mx-4"
@@ -463,15 +553,20 @@ export function IdeasSidebarShadcn({
               Finish your idea
             </DialogPrimitive.Title>
             <DialogPrimitive.Description className="text-xs sm:text-sm text-muted-foreground">
-              Are you sure you want to finish your idea? This action cannot be undone.
+              Are you sure you want to finish your idea? This action cannot be
+              undone.
             </DialogPrimitive.Description>
             <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-2 mt-4">
               <DialogPrimitive.Close asChild>
-                <Button variant="outline" className="w-full sm:w-auto" onClick={handleDeleteCancel}>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={handleDeleteCancel}
+                >
                   Cancel
                 </Button>
               </DialogPrimitive.Close>
-              <Button 
+              <Button
                 className="bg-green-500 hover:bg-green-600 text-white w-full sm:w-auto"
                 onClick={handleDeleteConfirm}
               >
