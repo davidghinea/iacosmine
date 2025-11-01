@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import PostCard from "./post-card";
 import { supabase } from "@/lib/supabase";
-import { Building2, UserPlus, X } from "lucide-react";
+import { Building2, UserPlus, X, Copy, Check } from "lucide-react";
 
 interface Post {
   id: string;
@@ -349,6 +349,40 @@ export default function Feed() {
     }
   };
 
+  // Invite modal state
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteOrgId, setInviteOrgId] = useState<string | null>(null);
+  const [inviteOrgName, setInviteOrgName] = useState<string>("");
+  const [inviteRole, setInviteRole] = useState("");
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleOpenInviteModal = (orgId: string, orgName: string) => {
+    setInviteOrgId(orgId);
+    setInviteOrgName(orgName);
+    setInviteRole("");
+    setIsCopied(false);
+    setIsInviteModalOpen(true);
+    setSelectedOrg(null);
+    setMenuPosition(null);
+  };
+
+  const handleCopyInviteLink = async () => {
+    if (!inviteOrgId || !inviteRole.trim()) return;
+
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/invite/${inviteOrgId}?role=${encodeURIComponent(
+      inviteRole.trim()
+    )}`;
+
+    try {
+      await navigator.clipboard.writeText(link);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   return (
     <>
       <div className="w-full max-w-2xl mx-auto py-8 px-4">
@@ -442,8 +476,7 @@ export default function Feed() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  console.log("Invite members:", selectedOrg.id);
-                  // Open invite modal
+                  handleOpenInviteModal(selectedOrg.id, selectedOrg.name);
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition"
               >
@@ -557,6 +590,93 @@ export default function Feed() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Invite Modal */}
+      {isInviteModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="invite-modal-title"
+          className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center"
+        >
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setIsInviteModalOpen(false)}
+          />
+
+          <div className="relative w-full max-w-md mx-4 sm:mx-0 bg-white dark:bg-gray-900 rounded-lg shadow-lg ring-1 ring-black/10 dark:ring-white/10 z-10 overflow-hidden">
+            <div className="p-6">
+              <h2
+                id="invite-modal-title"
+                className="text-lg font-semibold text-gray-900 dark:text-gray-100"
+              >
+                Invite Members
+              </h2>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                Create an invite link for{" "}
+                <span className="font-medium">{inviteOrgName}</span>
+              </p>
+
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Role *
+                  </label>
+                  <input
+                    type="text"
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value)}
+                    className="block w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., Developer, Designer, Manager"
+                    autoFocus
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Assign a role to new members joining via this link
+                  </p>
+                </div>
+
+                {inviteRole.trim() && (
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Invite Link:
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs bg-white dark:bg-gray-900 px-2 py-1.5 rounded border border-gray-200 dark:border-gray-700 truncate">
+                        {`${
+                          window.location.origin
+                        }/invite/${inviteOrgId}?role=${encodeURIComponent(
+                          inviteRole.trim()
+                        )}`}
+                      </code>
+                      <button
+                        onClick={handleCopyInviteLink}
+                        className="shrink-0 p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition"
+                        title="Copy link"
+                      >
+                        {isCopied ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsInviteModalOpen(false)}
+                  className="px-3 py-2 rounded-md text-sm bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
