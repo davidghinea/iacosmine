@@ -5,6 +5,7 @@ import PostCard from "./post-card";
 import { supabase } from "@/lib/supabase";
 import { Building2, UserPlus, X, Copy, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface Post {
   id: string;
@@ -421,11 +422,11 @@ export default function Feed() {
                 className="w-full flex items-center gap-3 px-2 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-left focus:outline-none transition"
                 onClick={(e) => handleOrgClick(org, e)}
               >
-                <img
-                  src={org.avatar}
-                  alt={org.name}
-                  className="w-8 h-8 rounded-full object-cover shrink-0"
-                />
+                <Avatar className="w-8 h-8 shrink-0">
+                  <AvatarFallback className="text-sm font-medium">
+                    {org.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
                 <span className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
                   {org.name}
                 </span>
@@ -438,7 +439,7 @@ export default function Feed() {
       {/* Organization menu popup */}
       {selectedOrg && menuPosition && (
         <div
-          className="fixed z-[60] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-2 min-w-[220px]"
+          className="fixed z-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-2 min-w-[220px]"
           style={{
             top: `${menuPosition.top}px`,
             left: `${menuPosition.left}px`,
@@ -602,7 +603,7 @@ export default function Feed() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="invite-modal-title"
-          className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center"
+          className="fixed inset-0 z-70 flex items-end sm:items-center justify-center"
         >
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-sm"

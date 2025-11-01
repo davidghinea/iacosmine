@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import PostCard from "../personal-components/post-card";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
+import { IdeasSidebarShadcn } from "../personal-components/ideas-sidebar-shadcn";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface Post {
   id: string;
@@ -30,7 +31,7 @@ interface Organization {
 }
 
 interface CompanyProfileProps {
-  orgId: string; // Changed from company name to org ID
+  orgId: string;
 }
 
 export default function CompanyProfile({ orgId }: CompanyProfileProps) {
@@ -113,45 +114,46 @@ export default function CompanyProfile({ orgId }: CompanyProfileProps) {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <Card className="p-6 mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-          <div className="relative w-24 h-24 sm:w-32 sm:h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-            <Image
-              src="/orgs/placeholder.jpg"
-              alt={`${organization.name} logo`}
-              fill
-              className="object-contain rounded-lg"
-            />
+    <IdeasSidebarShadcn>
+      <div className="container mx-auto p-6">
+        <Card className="p-6 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+            <Avatar className="w-24 h-24 sm:w-32 sm:h-32 shrink-0">
+              <AvatarFallback className="text-4xl sm:text-5xl font-semibold">
+                {organization.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold truncate">
+                {organization.name}
+              </h1>
+              <p className="text-gray-500 mt-1 text-sm">Organization Profile</p>
+              <p className="mt-3 text-sm sm:text-base text-gray-700 dark:text-gray-300 leading-relaxed wrap-break-word">
+                {organization.description || "No description available."}
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold truncate">
-              {organization.name}
-            </h1>
-            <p className="text-gray-500 mt-1 text-sm">Organization Profile</p>
-            <p className="mt-3 text-sm sm:text-base text-gray-700 leading-relaxed break-words">
-              {organization.description || "No description available."}
-            </p>
-          </div>
-        </div>
-      </Card>
+        </Card>
 
-      <h2 className="text-2xl font-semibold mb-4">
-        Posts from {organization.name}
-      </h2>
-      {posts.length > 0 ? (
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onCongratulate={() => handleCongratulate(post.id)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="text-gray-500">No posts yet for this organization.</div>
-      )}
-    </div>
+        <h2 className="text-2xl font-semibold mb-4">
+          Posts from {organization.name}
+        </h2>
+        {posts.length > 0 ? (
+          <div className="space-y-4">
+            {posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onCongratulate={() => handleCongratulate(post.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-gray-500">
+            No posts yet for this organization.
+          </div>
+        )}
+      </div>
+    </IdeasSidebarShadcn>
   );
 }

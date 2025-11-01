@@ -29,6 +29,11 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
+import { usePathname } from "next/navigation";
+
+// Track if a sidebar is already mounted
+let sidebarInstanceCount = 0;
 
 // shared UI constants to keep sizes consistent and code short
 const AVATAR_SIZES = "size-10 sm:size-12 md:size-16";
@@ -39,7 +44,7 @@ const ITEM_ROW =
   "flex items-start gap-2 sm:gap-3 md:gap-3 p-3 sm:p-4 md:p-6 relative";
 
 interface Idea {
-  id: number;
+  id: string; // Changed from number to string (UUID)
   user: {
     name: string;
     avatar: string;
@@ -51,52 +56,9 @@ interface Idea {
   downvotes?: number;
   published?: boolean;
   myVote?: "up" | "down" | null;
+  org_id?: string; // Add org_id
+  author_id?: string; // Add author_id
 }
-
-const mockIdeas: Idea[] = [
-  {
-    id: 1,
-    user: {
-      name: "Sarah Chen",
-      avatar: "/diverse-woman-portrait.png",
-    },
-    title: "AI-powered code review assistant",
-    description:
-      "An intelligent system that automatically reviews pull requests, suggests improvements, and catches potential bugs before they reach production. It learns from your team's coding patterns and adapts to your style guide.",
-    starred: false,
-    upvotes: 0,
-    downvotes: 0,
-    published: true,
-  },
-  {
-    id: 2,
-    user: {
-      name: "Marcus Johnson",
-      avatar: "/man.jpg",
-    },
-    title: "Real-time collaboration whiteboard",
-    description:
-      "A virtual whiteboard that allows teams to brainstorm together in real-time, with features like sticky notes, drawing tools, and the ability to import images and documents. Perfect for remote teams.",
-    starred: false,
-    upvotes: 0,
-    downvotes: 0,
-    published: true,
-  },
-  {
-    id: 3,
-    user: {
-      name: "Emily Rodriguez",
-      avatar: "/professional-woman.png",
-    },
-    title: "Sustainable shopping tracker",
-    description:
-      "Track the environmental impact of your purchases and get suggestions for more sustainable alternatives. Includes carbon footprint calculations and connects you with eco-friendly brands.",
-    starred: false,
-    upvotes: 0,
-    downvotes: 0,
-    published: true,
-  },
-];
 
 const defaultUser = {
   name: "You",
@@ -113,11 +75,11 @@ function IdeaTile({
   isPublished,
 }: {
   idea: Idea;
-  onToggleStar: (id: number) => void;
-  onToggleExpand: (id: number) => void;
-  onUpvote: (id: number) => void;
-  onDownvote: (id: number) => void;
-  onDelete: (id: number) => void;
+  onToggleStar: (id: string) => void; // Changed from number to string
+  onToggleExpand: (id: string) => void; // Changed from number to string
+  onUpvote: (id: string) => void; // Changed from number to string
+  onDownvote: (id: string) => void; // Changed from number to string
+  onDelete: (id: string) => void; // Changed from number to string
   isPublished: boolean;
 }) {
   const [isExpanded, setIsExpanded] = React.useState(false);
@@ -241,7 +203,7 @@ function IdeaTile({
         </div>
       </div>
       {isExpanded && (
-        <div className="pr-3 sm:pr-4 md:pr-6 pb-4 sm:pb-6 md:pb-10 pl-[3.75rem] sm:pl-[4.75rem] md:pl-[6.25rem] text-sm sm:text-base md:text-lg text-muted-foreground break-words whitespace-pre-wrap">
+        <div className="pr-3 sm:pr-4 md:pr-6 pb-4 sm:pb-6 md:pb-10 pl-15 sm:pl-19 md:pl-25 text-sm sm:text-base md:text-lg text-muted-foreground wrap-break-word">
           {idea.description}
         </div>
       )}
@@ -255,7 +217,7 @@ function SidebarToggleButton() {
 
   return (
     <div
-      className="fixed top-1/2 -translate-y-1/2 transition-all duration-300 flex items-center z-[9999] pointer-events-auto"
+      className="fixed top-1/2 -translate-y-1/2 transition-all duration-300 flex items-center z-9999 pointer-events-auto"
       style={{
         // position the control so its right edge aligns with the sidebar's left edge when open,
         // and anchor to the viewport edge when closed.
@@ -306,15 +268,207 @@ export function IdeasSidebarShadcn({
 }: {
   children?: React.ReactNode;
 }) {
-  const [ideas, setIdeas] = React.useState<Idea[]>(mockIdeas);
-  const [expandedId, setExpandedId] = React.useState<number | null>(null);
+  const pathname = usePathname();
+  const [ideas, setIdeas] = React.useState<Idea[]>([]);
+  const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [newIdeaTitle, setNewIdeaTitle] = React.useState("");
   const [newIdeaDescription, setNewIdeaDescription] = React.useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [ideaToDelete, setIdeaToDelete] = React.useState<number | null>(null);
+  const [ideaToDelete, setIdeaToDelete] = React.useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
+  const [isLoadingIdeas, setIsLoadingIdeas] = React.useState(true);
+  const [isMember, setIsMember] = React.useState(false);
+  const [isCheckingMembership, setIsCheckingMembership] = React.useState(true);
+  const [orgId, setOrgId] = React.useState<string | null>(null);
+  const [instanceId] = React.useState(() => ++sidebarInstanceCount);
 
-  const updateIdea = (id: number, updater: (i: Idea) => Idea) =>
+  // Cleanup on unmount
+  React.useEffect(() => {
+    console.log(`Sidebar instance ${instanceId} mounted`);
+    return () => {
+      console.log(`Sidebar instance ${instanceId} unmounted`);
+      sidebarInstanceCount--;
+    };
+  }, [instanceId]);
+
+  // Extract orgId from URL
+  React.useEffect(() => {
+    const match = pathname.match(/\/organization\/([^\/]+)/);
+    const extractedOrgId = match ? match[1] : null;
+    console.log(
+      `Instance ${instanceId} - Extracted orgId from URL:`,
+      extractedOrgId,
+      "pathname:",
+      pathname
+    );
+    setOrgId(extractedOrgId);
+  }, [pathname, instanceId]);
+
+  // Fetch current user and check membership
+  React.useEffect(() => {
+    const fetchUserAndCheckMembership = async () => {
+      if (!orgId) {
+        console.log("No orgId available yet");
+        setIsCheckingMembership(false);
+        return;
+      }
+
+      console.log("Checking membership for orgId:", orgId);
+      setIsCheckingMembership(true);
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        setCurrentUserId(user.id);
+        console.log("Current user ID:", user.id);
+
+        // Check if user is a member of this organization
+        const { data: membership, error } = await supabase
+          .from("memberships")
+          .select("id, role")
+          .eq("org_id", orgId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        console.log("Membership query result:", { membership, error });
+
+        if (membership) {
+          console.log("User IS a member of org:", orgId);
+          setIsMember(true);
+        } else {
+          console.log("User is NOT a member of org:", orgId);
+          setIsMember(false);
+        }
+      } else {
+        console.log("No authenticated user");
+      }
+
+      setIsCheckingMembership(false);
+    };
+    fetchUserAndCheckMembership();
+  }, [orgId]);
+
+  // Fetch ideas from Supabase
+  React.useEffect(() => {
+    if (!orgId) {
+      console.log("No orgId provided");
+      setIsLoadingIdeas(false);
+      return;
+    }
+
+    if (isCheckingMembership) {
+      console.log("Still checking membership, waiting...");
+      return;
+    }
+
+    if (!isMember) {
+      console.log("User is not a member, not fetching ideas");
+      setIsLoadingIdeas(false);
+      return;
+    }
+
+    const fetchIdeas = async () => {
+      console.log("Fetching ideas for org:", orgId);
+      setIsLoadingIdeas(true);
+
+      const { data, error } = await supabase
+        .from("private_posts")
+        .select("*")
+        .eq("org_id", orgId)
+        .order("created_at", { ascending: false });
+
+      console.log("Fetch ideas result:", { data, error, count: data?.length });
+
+      if (error) {
+        console.error("Error fetching ideas:", error);
+        setIsLoadingIdeas(false);
+        return;
+      }
+
+      // Get all unique author IDs from the posts
+      const authorIds = [
+        ...new Set((data || []).map((p) => p.author_id).filter(Boolean)),
+      ];
+
+      let profilesMap: Record<string, { full_name: string }> = {};
+      if (authorIds.length > 0) {
+        // Fetch all profiles for these author IDs in one go
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", authorIds);
+
+        if (profilesError) {
+          console.error("Error fetching profiles:", profilesError);
+        } else {
+          // Create a map of authorId -> profile for easy lookup
+          profilesMap = profilesData.reduce(
+            (acc: Record<string, { full_name: string }>, profile) => {
+              acc[profile.id] = profile;
+              return acc;
+            },
+            {}
+          );
+        }
+      }
+
+      const ideasWithAuthors = (data || []).map((post: any) => {
+        const authorName =
+          profilesMap[post.author_id]?.full_name || "Anonymous";
+
+        return {
+          id: post.id,
+          user: {
+            name: authorName,
+            avatar: "/placeholder.svg",
+          },
+          title: post.title,
+          description: post.description || "",
+          starred: false,
+          upvotes: post.upvotes || 0,
+          downvotes: post.downvotes || 0,
+          published: true,
+          myVote: null,
+          org_id: post.org_id,
+          author_id: post.author_id,
+        };
+      });
+
+      console.log("Transformed ideas:", ideasWithAuthors.length);
+      setIdeas(ideasWithAuthors);
+      setIsLoadingIdeas(false);
+    };
+
+    fetchIdeas();
+
+    // Subscribe to real-time changes with org-specific channel
+    const channel = supabase
+      .channel(`org_${orgId}_private_posts`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "private_posts",
+          filter: `org_id=eq.${orgId}`,
+        },
+        (payload) => {
+          console.log(`Real-time update for org ${orgId}:`, payload);
+          fetchIdeas();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log(`Unsubscribing from org ${orgId} channel`);
+      supabase.removeChannel(channel);
+    };
+  }, [orgId, isMember, isCheckingMembership]);
+
+  const updateIdea = (id: string, updater: (i: Idea) => Idea) =>
     setIdeas((prev) => prev.map((i) => (i.id === id ? updater(i) : i)));
 
   const sortStarredFirst = (list: Idea[]) =>
@@ -322,7 +476,7 @@ export function IdeasSidebarShadcn({
       .slice()
       .sort((a, b) => (a.starred === b.starred ? 0 : a.starred ? -1 : 1));
 
-  const toggleStar = (id: number) => {
+  const toggleStar = (id: string) => {
     setIdeas((prev) =>
       sortStarredFirst(
         prev.map((i) => (i.id === id ? { ...i, starred: !i.starred } : i))
@@ -330,58 +484,83 @@ export function IdeasSidebarShadcn({
     );
   };
 
-  const toggleExpand = (id: number) => {
+  const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  const handleUpvote = (id: number) =>
-    updateIdea(id, (i) => {
-      const up = i.upvotes || 0;
-      const down = i.downvotes || 0;
-      const vote = i.myVote ?? null;
-      if (vote === "up") {
-        return { ...i, upvotes: Math.max(0, up - 1), myVote: null };
-      }
-      if (vote === "down") {
-        return {
-          ...i,
-          upvotes: up + 1,
-          downvotes: Math.max(0, down - 1),
-          myVote: "up",
-        };
-      }
-      return { ...i, upvotes: up + 1, myVote: "up" };
-    });
+  const handleUpvote = async (id: string) => {
+    const idea = ideas.find((i) => i.id === id);
+    if (!idea) return;
 
-  const handleDownvote = (id: number) =>
-    updateIdea(id, (i) => {
-      const up = i.upvotes || 0;
-      const down = i.downvotes || 0;
-      const vote = i.myVote ?? null;
-      if (vote === "down") {
-        return { ...i, downvotes: Math.max(0, down - 1), myVote: null };
-      }
-      if (vote === "up") {
-        return {
-          ...i,
-          downvotes: down + 1,
-          upvotes: Math.max(0, up - 1),
-          myVote: "down",
-        };
-      }
-      return { ...i, downvotes: down + 1, myVote: "down" };
-    });
+    const newUpvotes =
+      idea.myVote === "up"
+        ? Math.max(0, (idea.upvotes || 0) - 1)
+        : (idea.upvotes || 0) + 1;
+    const newDownvotes =
+      idea.myVote === "down"
+        ? Math.max(0, (idea.downvotes || 0) - 1)
+        : idea.downvotes || 0;
 
-  const handleDeleteClick = (id: number) => {
+    const { error } = await supabase
+      .from("private_posts")
+      .update({ upvotes: newUpvotes, downvotes: newDownvotes })
+      .eq("id", id);
+
+    if (!error) {
+      updateIdea(id, (i) => ({
+        ...i,
+        upvotes: newUpvotes,
+        downvotes: newDownvotes,
+        myVote: i.myVote === "up" ? null : "up",
+      }));
+    }
+  };
+
+  const handleDownvote = async (id: string) => {
+    const idea = ideas.find((i) => i.id === id);
+    if (!idea) return;
+
+    const newDownvotes =
+      idea.myVote === "down"
+        ? Math.max(0, (idea.downvotes || 0) - 1)
+        : (idea.downvotes || 0) + 1;
+    const newUpvotes =
+      idea.myVote === "up"
+        ? Math.max(0, (idea.upvotes || 0) - 1)
+        : idea.upvotes || 0;
+
+    const { error } = await supabase
+      .from("private_posts")
+      .update({ upvotes: newUpvotes, downvotes: newDownvotes })
+      .eq("id", id);
+
+    if (!error) {
+      updateIdea(id, (i) => ({
+        ...i,
+        upvotes: newUpvotes,
+        downvotes: newDownvotes,
+        myVote: i.myVote === "down" ? null : "down",
+      }));
+    }
+  };
+
+  const handleDeleteClick = (id: string) => {
     setIdeaToDelete(id);
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (ideaToDelete !== null) {
-      setIdeas((prevIdeas) =>
-        prevIdeas.filter((idea) => idea.id !== ideaToDelete)
-      );
+      const { error } = await supabase
+        .from("private_posts")
+        .delete()
+        .eq("id", ideaToDelete);
+
+      if (!error) {
+        setIdeas((prevIdeas) =>
+          prevIdeas.filter((idea) => idea.id !== ideaToDelete)
+        );
+      }
       setDeleteDialogOpen(false);
       setIdeaToDelete(null);
     }
@@ -392,22 +571,30 @@ export function IdeasSidebarShadcn({
     setIdeaToDelete(null);
   };
 
-  const handleAddIdea = () => {
-    if (!newIdeaTitle.trim()) return;
+  const handleAddIdea = async () => {
+    if (!newIdeaTitle.trim() || !currentUserId || !orgId) return;
 
-    const newId = Math.max(...ideas.map((i) => i.id), 0) + 1;
-    const newIdea: Idea = {
-      id: newId,
-      user: defaultUser,
-      title: newIdeaTitle.trim(),
-      description: newIdeaDescription.trim() || "No description provided.",
-      starred: false,
-      upvotes: 0,
-      downvotes: 0,
-      published: true,
-    };
+    const { data, error } = await supabase
+      .from("private_posts")
+      .insert([
+        {
+          org_id: orgId,
+          title: newIdeaTitle.trim(),
+          description: newIdeaDescription.trim() || null,
+          author_id: currentUserId,
+          upvotes: 0,
+          downvotes: 0,
+          vouched: false,
+        },
+      ])
+      .select()
+      .single();
 
-    setIdeas((prevIdeas) => [newIdea, ...prevIdeas]);
+    if (error) {
+      console.error("Error creating idea:", error);
+      return;
+    }
+
     setNewIdeaTitle("");
     setNewIdeaDescription("");
     setIsSheetOpen(false);
@@ -420,6 +607,25 @@ export function IdeasSidebarShadcn({
       setNewIdeaDescription("");
     }
   };
+
+  // Don't render sidebar if not a member or no orgId
+  if (!orgId || (!isMember && !isCheckingMembership)) {
+    console.log(
+      `Instance ${instanceId} - Not rendering sidebar - orgId:`,
+      orgId,
+      "isMember:",
+      isMember
+    );
+    return <>{children}</>;
+  }
+
+  // Only render the first instance
+  if (instanceId > 1) {
+    console.log(`Instance ${instanceId} - Skipping duplicate sidebar`);
+    return <>{children}</>;
+  }
+
+  console.log(`Instance ${instanceId} - Rendering sidebar`);
 
   return (
     <SidebarProvider
@@ -446,26 +652,40 @@ export function IdeasSidebarShadcn({
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
-              <div className="flex flex-col">
-                {ideas.map((idea) => (
-                  <IdeaTile
-                    key={idea.id}
-                    idea={idea}
-                    onToggleStar={toggleStar}
-                    onToggleExpand={toggleExpand}
-                    onUpvote={handleUpvote}
-                    onDownvote={handleDownvote}
-                    onDelete={handleDeleteClick}
-                    isPublished={idea.published !== false}
-                  />
-                ))}
-              </div>
+              {isLoadingIdeas ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="text-sm text-muted-foreground">
+                    Loading ideas...
+                  </div>
+                </div>
+              ) : ideas.length === 0 ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="text-sm text-muted-foreground">
+                    No ideas yet. Be the first to post!
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  {ideas.map((idea) => (
+                    <IdeaTile
+                      key={idea.id}
+                      idea={idea}
+                      onToggleStar={toggleStar}
+                      onToggleExpand={toggleExpand}
+                      onUpvote={handleUpvote}
+                      onDownvote={handleDownvote}
+                      onDelete={handleDeleteClick}
+                      isPublished={idea.published !== false}
+                    />
+                  ))}
+                </div>
+              )}
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter className="border-t border-foreground/40 p-3 sm:p-4 md:p-6">
           <Button
-            className="w-full h-[3.25rem] sm:h-[3.5rem] md:h-[3.75rem] text-base sm:text-lg md:text-xl bg-black text-white hover:bg-black/90 cursor-pointer"
+            className="w-full h-13 sm:h-14 md:h-15 text-base sm:text-lg md:text-xl bg-black text-white hover:bg-black/90 cursor-pointer"
             onClick={() => setIsSheetOpen(true)}
           >
             + Post your idea
@@ -475,7 +695,7 @@ export function IdeasSidebarShadcn({
 
       {isSheetOpen && (
         <div
-          className="fixed inset-y-0 right-0 z-[60] sm:z-50 bg-sidebar border-l border-foreground/30 h-screen flex flex-col"
+          className="fixed inset-y-0 right-0 z-60 sm:z-50 bg-sidebar border-l border-foreground/30 h-screen flex flex-col"
           style={{ width: "var(--sidebar-width)" }}
         >
           <div className="border-b border-foreground/30 p-4 sm:p-5 md:p-6">
